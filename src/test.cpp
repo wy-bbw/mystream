@@ -21,6 +21,13 @@ void test(ARRAY_TYPE * a) {
     }
 }
 
+void testAdd(ARRAY_TYPE *a, ARRAY_TYPE *b, ARRAY_TYPE *c) {
+    for (int i = 0; i < getSize(); ++i) {
+        double err = std::abs(b[i] + c[i]  - a[i]);
+        assert(err < TOL);
+    }
+}
+
 long long getSize() {
     return 10000000;
 }
