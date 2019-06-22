@@ -3,6 +3,7 @@
 #include <chrono>
 #include <functional>
 #include "header.h"
+#include <omp.h>
 
 
 
@@ -20,7 +21,9 @@ std::chrono::nanoseconds run_benchmark(std::function<void()> bench, std::functio
 
 int main() {
 #pragma omp parallel
-    std::cout << "testing with array of size: " << getSize() << std::endl;
+    {
+    std::printf("testing with array of size: %d\n", getSize());
+    }
 
     size_t size = sizeof(ARRAY_TYPE);
     ARRAY_TYPE *a = new ARRAY_TYPE[getSize()];
@@ -39,7 +42,7 @@ int main() {
     auto transferRate = [&](double duration, long scaling) {return sizeof(ARRAY_TYPE) * getSize() * scaling / duration * TIME_CONVERSION_FACTOR;};
 
     auto vectorTriad = [&]() {
-#pragma omp for //schedule(static)
+#pragma omp parallel for //schedule(static)
                 for (int i = 0; i < getSize(); ++i) {
                     a[i] = b[i] * c[i] + d[i];
                 }};
@@ -48,7 +51,7 @@ int main() {
     std::cout << "a[i] = b[i] * c[i] + d[i] data transfer rate [Mb]: " << transferRate(duration, 4) / BYTE_PER_MEGABYTE << std::endl;
 
     auto vectorAdd = [&]() {
-#pragma omp for //schedule(static)
+#pragma omp parallel for //schedule(static)
                 for (int i = 0; i < getSize(); ++i) {
                     a[i] = b[i] + c[i];
                 }};
@@ -58,7 +61,7 @@ int main() {
 
 
     auto oneVectorTriad = [&]() {
-#pragma omp for //schedule(static)
+#pragma omp parallel for //schedule(static)
         for (int i = 0; i < 4 * getSize(); i = i + 4) {
             e[i] = e[i+1] * e[i+2] + e[i+3];
         }
@@ -66,20 +69,6 @@ int main() {
     auto oneVectorTriadTest = [&](){test(e);};
     duration = run_benchmark(oneVectorTriad, oneVectorTriadTest).count();
     std::cout << "a[i] = b[i] * c[i] + d[i] data transfer rate [Mb]: " << transferRate(duration, 4) / BYTE_PER_MEGABYTE << " single vector" << std::endl;
-
-
-
-//    begin = std::chrono::steady_clock::now();
-//#pragma omp for //schedule(static)
-//    for (int i = 0; i < 4 * getSize(); i = i + 4) {
-//        e[i] = e[i+1] * e[i+2] + e[i+3];
-//    }
-//    end = std::chrono::steady_clock::now();
-//    test(e);
-//    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-//    transferRate = sizeof(ARRAY_TYPE) * getSize() * 4 / duration * TIME_CONVERSION_FACTOR; 
-//    std::cout << "a[i] = b[i] * c[i] + d[i] data transfer rate [Mb]: " << transferRate / BYTE_PER_MEGABYTE  << " single array "<< std::endl;
-
 
     delete[] a;
     delete[] b;
